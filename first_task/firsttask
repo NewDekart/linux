@@ -3,42 +3,23 @@
 # first parameter is csv file path (required)
 # second parameter is path to result folder path (optional)
 
-translit() {
-    local NAME=$1
-    local TRS;
-    TRS=$(sed "y/абвгдезийклмнопрстуфхцы/abvgdezijklmnoprstufxcy/" <<< "$NAME")
-    TRS=$(sed "y/АБВГДЕЗИЙКЛМНОПРСТУФХЦЫ/ABVGDEZIJKLMNOPRSTUFXCY/" <<< "$TRS")
-    TRS=${TRS//ч/ch};
-    TRS=${TRS//Ч/CH} TRS=${TRS//ш/sh};
-    TRS=${TRS//Ш/SH} TRS=${TRS//ё/jo};
-    TRS=${TRS//Ё/JO} TRS=${TRS//ж/zh};
-    TRS=${TRS//Ж/ZH} TRS=${TRS//щ/sh\'};
-    TRS=${TRS///SH\'} TRS=${TRS//э/je};
-    TRS=${TRS//Э/JE} TRS=${TRS//ю/ju};
-    TRS=${TRS//Ю/JU} TRS=${TRS//я/ja};
-    TRS=${TRS//Я/JA} TRS=${TRS//ъ/\`};
-    TRS=${TRS//ъ\`} TRS=${TRS//ь/\'};
-    TRS=${TRS//Ь/\'}
-    hash iconv &> /dev/null && TRS=$(iconv -c -f UTF8 -t ASCII//TRANSLIT <<< "$TRS")
-    echo "$TRS";
-}
-
 while IFS=, read -r lastName firstName
 do
     firstNameFirstLetter=${firstName:0:01}
 
     russianLogin="${firstNameFirstLetter}${lastName}"
 
-    lowerRussianLogin=${russianLogin,,}
+    traslitedLogin=$(echo "$russianLogin" | iconv -f utf-8 -t koi-7)
 
-    traslitedLogin=$(translit "$lowerRussianLogin")
+    lowerTranslitedLogin=${traslitedLogin,,}
+
     password=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 10)
 
-    [[ $2 = "" ]] && resultPath=$traslitedLogin || resultPath="$2/$traslitedLogin"
+    [[ $2 = "" ]] && resultPath=$lowerTranslitedLogin || resultPath="$2/$lowerTranslitedLogin"
 
-    # home directory cretates by default, shell bin/bash is default
-    sudo useradd $traslitedLogin &&
-    echo $traslitedLogin:$password | sudo chpasswd &&
-    printf "userLogin: $traslitedLogin\npassword: $password" > $resultPath
+    #home directory cretates by default, shell bin/bash is default
+    sudo useradd $lowerTranslitedLogin &&
+    echo $lowerTranslitedLogin:$password | sudo chpasswd &&
+    printf "userLogin: $lowerTranslitedLogin\npassword: $password" > $resultPath
     
 done < $1
